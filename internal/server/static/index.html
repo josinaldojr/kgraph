@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>kgraph</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<script>window.KGRAPH = {{.Bootstrap}};</script>
+{{if eq .Page "picker"}}
+<main id="picker">
+  <h1>kgraph</h1>
+  <p class="picker-sub">Choose a project to visualize</p>
+  <div id="picker-status">loading&hellip;</div>
+  <div id="picker-grid"></div>
+</main>
+{{else}}
+<div id="toolbar">
+  {{if .HomeURL}}<a id="home-link" href="{{.HomeURL}}" title="Back to all projects">&#8962; All projects</a>{{end}}
+  <input id="search" type="search" placeholder="Search nodes…" autocomplete="off">
+  <div id="search-results"></div>
+  <button id="back-global" hidden>&larr; Back to global graph</button>
+  <div id="filters"></div>
+  <span id="status"></span>
+</div>
+<canvas id="graph"></canvas>
+<aside id="detail" hidden>
+  <button id="detail-close" aria-label="Close">&times;</button>
+  <div id="detail-body"></div>
+</aside>
+{{end}}
+<script src="/static/app.js"></script>
+</body>
+</html>
