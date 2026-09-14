@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"kgraph/internal/summarizer"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 // edges, and renders a token-budgeted context string built from node
 // summaries and direct relations. hops <= 0 uses DefaultHops; maxTokens <=
 // 0 uses DefaultMaxTokens.
-func GetContext(g *graph.Graph, s *store.Store, target string, hops int, maxTokens int) (string, error) {
+func GetContext(g *graph.Graph, s summarizer.SummaryReader, target string, hops int, maxTokens int) (string, error) {
 	if hops <= 0 {
 		hops = DefaultHops
 	}

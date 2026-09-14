@@ -67,19 +67,25 @@ func (s *Store) SaveGraph(g *graph.Graph) (SaveStats, error) {
 			return stats, fmt.Errorf("store: marshaling properties for edge %s: %w", e.ID, err)
 		}
 
-		var existingProps string
-		err = tx.QueryRow(`SELECT properties FROM edges WHERE id = ?`, e.ID).Scan(&existingProps)
-		if err == nil && existingProps == string(props) {
+		confidence := e.Confidence
+		if confidence == "" {
+			confidence = graph.ConfidenceExtracted
+		}
+
+		var existingProps, existingConfidence string
+		err = tx.QueryRow(`SELECT properties, confidence FROM edges WHERE id = ?`, e.ID).Scan(&existingProps, &existingConfidence)
+		if err == nil && existingProps == string(props) && existingConfidence == confidence {
 			stats.EdgesUnchanged++
 			continue
 		}
 
 		_, err = tx.Exec(`
-			INSERT INTO edges (id, type, src_id, dst_id, properties)
-			VALUES (?, ?, ?, ?, ?)
+			INSERT INTO edges (id, type, src_id, dst_id, confidence, properties)
+			VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
-				type=excluded.type, src_id=excluded.src_id, dst_id=excluded.dst_id, properties=excluded.properties`,
-			e.ID, string(e.Type), e.SrcID, e.DstID, string(props))
+				type=excluded.type, src_id=excluded.src_id, dst_id=excluded.dst_id,
+				confidence=excluded.confidence, properties=excluded.properties`,
+			e.ID, string(e.Type), e.SrcID, e.DstID, confidence, string(props))
 		if err != nil {
 			return stats, fmt.Errorf("store: upserting edge %s: %w", e.ID, err)
 		}
@@ -90,6 +96,37 @@ func (s *Store) SaveGraph(g *graph.Graph) (SaveStats, error) {
 		return stats, fmt.Errorf("store: commit: %w", err)
 	}
 	return stats, nil
+}
+
+// RefreshNodeProperties unconditionally overwrites the properties column
+// for every node in g that already exists in the database, independent of
+// SaveGraph's content-hash gating. It exists for the analyze stage
+// (internal/analytics): degree, god-node, and community metadata are
+// derived from the whole graph's topology, so they can legitimately change
+// even when a node's own content hash hasn't — graph-storage's "Idempotent
+// persistence by content hash" guarantee is about *content* writes (the
+// node's own code changing), not this graph-derived metadata, so this
+// method deliberately bypasses that check rather than stretching SaveGraph
+// to cover both meanings of "unchanged". A node not yet persisted (e.g. one
+// SaveGraph is about to insert in the same build) is silently skipped here;
+// SaveGraph already writes its properties as part of the insert.
+func (s *Store) RefreshNodeProperties(g *graph.Graph) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("store: begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op if committed
+
+	for _, n := range g.Nodes() {
+		props, err := json.Marshal(n.Properties)
+		if err != nil {
+			return fmt.Errorf("store: marshaling properties for node %s: %w", n.ID, err)
+		}
+		if _, err := tx.Exec(`UPDATE nodes SET properties = ? WHERE id = ?`, string(props), n.ID); err != nil {
+			return fmt.Errorf("store: refreshing properties for node %s: %w", n.ID, err)
+		}
+	}
+	return tx.Commit()
 }
 
 // DeleteNodesForFile removes every node (and its incident edges) whose

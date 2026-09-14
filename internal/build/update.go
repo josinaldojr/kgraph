@@ -8,6 +8,7 @@ import (
 	"kgraph/internal/gitutil"
 	"kgraph/internal/graph"
 	"kgraph/internal/parser"
+	"kgraph/internal/parser/common"
 	"kgraph/internal/store"
 	"kgraph/internal/summarizer"
 )
@@ -28,8 +29,15 @@ type UpdateResult struct {
 // the Go packages containing changed files (plus SQL migrations, if any
 // changed), and marks the direct neighbors of every changed/removed node
 // stale so they resurface in the next `summarize pending` — per
-// design.md's Decision 9 and the incremental-update spec.
-func Update(repoPath, dbPath string) (UpdateResult, error) {
+// design.md's Decision 9 and the incremental-update spec. After
+// re-extraction, the enrich and analyze stages re-run over the full
+// (reloaded) graph — see Options — so rationale, confidence, degree,
+// god-node, and community metadata stay correct after the change.
+func Update(repoPath, dbPath string, opts ...Options) (UpdateResult, error) {
+	var opt Options
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
 	if !gitutil.IsRepo(repoPath) {
 		return UpdateResult{}, fmt.Errorf("update: %s is not a git repository", repoPath)
 	}
@@ -71,12 +79,16 @@ func Update(repoPath, dbPath string) (UpdateResult, error) {
 	if err != nil {
 		return UpdateResult{}, fmt.Errorf("update: loading prior graph: %w", err)
 	}
-	knownInternal := knownInternalPackages(old)
+
+	extToLang := extensionLanguageMap()
 
 	var (
 		changedAbs []string
 		hasSQL     bool
-		patterns   = map[string]bool{}
+		// patternsByLang groups changed directories by language, so a
+		// mixed-language changeset doesn't hand every extractor every
+		// other language's directories too.
+		patternsByLang = map[common.Language]map[string]bool{}
 	)
 	for _, rel := range changedRel {
 		abs, err := filepath.Abs(filepath.Join(repoPath, rel))
@@ -84,29 +96,40 @@ func Update(repoPath, dbPath string) (UpdateResult, error) {
 			continue
 		}
 		changedAbs = append(changedAbs, abs)
-		switch {
-		case strings.EqualFold(filepath.Ext(rel), ".go"):
-			dir := filepath.ToSlash(filepath.Dir(rel))
-			if dir == "." {
-				patterns["."] = true
-			} else {
-				patterns["./"+dir] = true
-			}
-		case strings.EqualFold(filepath.Ext(rel), ".sql"):
+		ext := strings.ToLower(filepath.Ext(rel))
+		if ext == ".sql" {
 			hasSQL = true
+			continue
+		}
+		lang, ok := extToLang[ext]
+		if !ok {
+			continue
+		}
+		if patternsByLang[lang] == nil {
+			patternsByLang[lang] = map[string]bool{}
+		}
+		dir := filepath.ToSlash(filepath.Dir(rel))
+		if dir == "." {
+			patternsByLang[lang]["."] = true
+		} else {
+			patternsByLang[lang]["./"+dir] = true
 		}
 	}
 
 	warnings := []string{}
 	var newSub *graph.Graph
-	if len(patterns) > 0 {
-		patternList := make([]string, 0, len(patterns))
-		for p := range patterns {
-			patternList = append(patternList, p)
+	if len(patternsByLang) > 0 {
+		patternLists := make(map[common.Language][]string, len(patternsByLang))
+		for lang, set := range patternsByLang {
+			list := make([]string, 0, len(set))
+			for p := range set {
+				list = append(list, p)
+			}
+			patternLists[lang] = list
 		}
-		g, w, err := parser.ExtractPackages(repoPath, patternList, knownInternal)
+		g, w, err := parser.ExtractPackages(repoPath, patternLists, old)
 		if err != nil {
-			return UpdateResult{}, fmt.Errorf("update: re-extracting %v: %w", patternList, err)
+			return UpdateResult{}, fmt.Errorf("update: re-extracting %v: %w", patternLists, err)
 		}
 		newSub = g
 		warnings = append(warnings, w...)
@@ -136,6 +159,22 @@ func Update(repoPath, dbPath string) (UpdateResult, error) {
 		return UpdateResult{}, fmt.Errorf("update: saving reprocessed graph: %w", err)
 	}
 
+	full, err := s.LoadGraph()
+	if err != nil {
+		return UpdateResult{}, fmt.Errorf("update: reloading full graph for enrich/analyze: %w", err)
+	}
+	enrichWarnings, err := enrichAndAnalyze(full, opt)
+	warnings = append(warnings, enrichWarnings...)
+	if err != nil {
+		return UpdateResult{}, err
+	}
+	if _, err := s.SaveGraph(full); err != nil {
+		return UpdateResult{}, fmt.Errorf("update: saving enriched/analyzed graph: %w", err)
+	}
+	if err := s.RefreshNodeProperties(full); err != nil {
+		return UpdateResult{}, fmt.Errorf("update: persisting analytics metadata: %w", err)
+	}
+
 	staleMarked := 0
 	for id := range staleTargets {
 		// Only mark nodes that still exist somewhere (old graph, since a
@@ -159,14 +198,19 @@ func Update(repoPath, dbPath string) (UpdateResult, error) {
 	}, nil
 }
 
-func knownInternalPackages(g *graph.Graph) map[string]bool {
-	out := make(map[string]bool)
-	for _, n := range g.Nodes() {
-		if n.Type == graph.NodeTypePackage {
-			if name, _ := n.Properties["name"].(string); name != "" {
-				// n.ID is "pkg:<import path>"
-				out[strings.TrimPrefix(n.ID, "pkg:")] = true
-			}
+// extensionLanguageMap builds a file-extension → Language lookup from every
+// extractor registered in the default factory (via FileExtensions()),
+// rather than hardcoding the extension list here — a newly registered
+// extractor (parser.RegisterExtractor) is picked up automatically.
+func extensionLanguageMap() map[string]common.Language {
+	out := make(map[string]common.Language)
+	for _, lang := range parser.Factory().Languages() {
+		ext, err := parser.Factory().Get(lang)
+		if err != nil {
+			continue
+		}
+		for _, e := range ext.FileExtensions() {
+			out[strings.ToLower(e)] = lang
 		}
 	}
 	return out

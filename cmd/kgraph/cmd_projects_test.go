@@ -15,11 +15,11 @@ func TestFormatProjectBuiltUpToDate(t *testing.T) {
 	out := formatProject(p, store.FreshCurrent)
 
 	for _, want := range []string{
-		"alpha",                    // display name = repo basename
-		`C:\repos\alpha`,           // full path
-		"123 nodes, 45 edges",      // counts
-		"up to date",               // freshness
-		"2026-",                    // last build time rendered
+		"alpha",               // display name = repo basename
+		`C:\repos\alpha`,      // full path
+		"123 nodes, 45 edges", // counts
+		"up to date",          // freshness
+		"2026-",               // last build time rendered
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("built entry missing %q:\n%s", want, out)

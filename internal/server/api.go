@@ -21,6 +21,16 @@ var hiddenByDefault = map[graph.NodeType]bool{
 	graph.NodeTypeColumn: true,
 }
 
+// Ceilings on client-controlled query parameters that drive BFS depth,
+// result-set size, or rendered output size, per server-api's "Query
+// parameter-driven work SHALL be bounded" requirement. An out-of-range
+// value clamps to these rather than erroring — see design.md Decision 1.
+const (
+	MaxHops        = 6
+	MaxTopK        = 100
+	MaxQueryTokens = 20000
+)
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(v) // best-effort: client likely disconnected if this fails
@@ -46,7 +56,7 @@ func toGraphDTO(g *graph.Graph, nodes []*graph.Node, edges []*graph.Edge) GraphD
 		dto.Nodes = append(dto.Nodes, toNodeSummaryDTO(g, n))
 	}
 	for _, e := range edges {
-		dto.Edges = append(dto.Edges, EdgeDTO{Type: string(e.Type), Src: e.SrcID, Dst: e.DstID})
+		dto.Edges = append(dto.Edges, EdgeDTO{Type: string(e.Type), Src: e.SrcID, Dst: e.DstID, Confidence: e.Confidence})
 	}
 	sort.Slice(dto.Nodes, func(i, j int) bool { return dto.Nodes[i].ID < dto.Nodes[j].ID })
 	sort.Slice(dto.Edges, func(i, j int) bool {
@@ -149,12 +159,7 @@ func apiGraphLocal(w http.ResponseWriter, r *http.Request, snap *Snapshot) {
 		writeError(w, http.StatusNotFound, "no such node: "+id)
 		return
 	}
-	hops := context.DefaultHops
-	if raw := r.URL.Query().Get("hops"); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			hops = n
-		}
-	}
+	hops := intParam(r, "hops", context.DefaultHops, MaxHops)
 	nodes, edges := context.LocalGraph(snap.Graph, target, hops)
 	writeJSON(w, toGraphDTO(snap.Graph, nodes, edges))
 }
@@ -203,7 +208,11 @@ func apiNode(w http.ResponseWriter, r *http.Request, snap *Snapshot) {
 	dto := NodeDetailDTO{
 		ID: n.ID, Type: string(n.Type), Signature: n.Signature,
 		File: n.File, LineStart: n.LineStart, LineEnd: n.LineEnd,
-		Note: noteFor(snap.NodeSummaries, n.ID),
+		Note:           noteFor(snap.NodeSummaries, n.ID),
+		Degree:         n.Degree(),
+		GodNode:        n.IsGodNode(),
+		Community:      n.Community(),
+		CommunityLabel: n.CommunityLabel(),
 	}
 	if hasOwnFileNote(n) {
 		fn := noteFor(snap.FileSummaries, n.File)
@@ -240,12 +249,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 // serving modes.
 func apiSearch(w http.ResponseWriter, r *http.Request, snap *Snapshot) {
 	q := r.URL.Query().Get("q")
-	topK := 10
-	if raw := r.URL.Query().Get("topK"); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			topK = n
-		}
-	}
+	topK := intParam(r, "topK", 10, MaxTopK)
 	results, err := summarizer.SearchNodes(snap.Graph, snapshotSummaryReader{snap}, q, topK)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -256,4 +260,98 @@ func apiSearch(w http.ResponseWriter, r *http.Request, snap *Snapshot) {
 		dtos = append(dtos, SearchResultDTO{ID: res.Node.ID, Type: string(res.Node.Type), File: res.Node.File, Score: res.Score})
 	}
 	writeJSON(w, dtos)
+}
+
+// handleQuery serves GET /api/query?q=&hops=&max_tokens= — a thin wrapper
+// over context.Query, per query-engine's server-API extension requirement.
+func (s *Server) handleQuery(w http.ResponseWriter, r *http.Request) {
+	s.withSnapshot(w, r, apiQuery)
+}
+
+// apiQuery implements query against a resolved snapshot, shared by both
+// serving modes.
+func apiQuery(w http.ResponseWriter, r *http.Request, snap *Snapshot) {
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		writeError(w, http.StatusBadRequest, "missing required query parameter: q")
+		return
+	}
+	hops := intParam(r, "hops", context.DefaultHops, MaxHops)
+	maxTokens := intParam(r, "max_tokens", context.DefaultMaxTokens, MaxQueryTokens)
+
+	result, err := context.Query(snap.Graph, snapshotSummaryReader{snap}, q, hops, maxTokens)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSON(w, QueryDTO{Question: q, Result: result})
+}
+
+// handlePath serves GET /api/path?src=&dst= — a thin wrapper over
+// context.Path.
+func (s *Server) handlePath(w http.ResponseWriter, r *http.Request) {
+	s.withSnapshot(w, r, apiPath)
+}
+
+// apiPath implements path-finding against a resolved snapshot, shared by
+// both serving modes.
+func apiPath(w http.ResponseWriter, r *http.Request, snap *Snapshot) {
+	src := r.URL.Query().Get("src")
+	dst := r.URL.Query().Get("dst")
+	if src == "" || dst == "" {
+		writeError(w, http.StatusBadRequest, "missing required query parameters: src, dst")
+		return
+	}
+
+	hops, err := context.Path(snap.Graph, src, dst)
+	if err != nil {
+		writeJSON(w, PathDTO{Found: false})
+		return
+	}
+	dtos := make([]PathHopDTO, len(hops))
+	for i, h := range hops {
+		dtos[i] = PathHopDTO{NodeID: h.Node.ID, NodeType: string(h.Node.Type), ViaEdge: string(h.ViaEdge), Confidence: h.Confidence}
+	}
+	writeJSON(w, PathDTO{Found: true, Hops: dtos})
+}
+
+// handleExplain serves GET /api/explain?id=&hops= — a thin wrapper over
+// context.Explain.
+func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
+	s.withSnapshot(w, r, apiExplain)
+}
+
+// apiExplain implements explain against a resolved snapshot, shared by
+// both serving modes.
+func apiExplain(w http.ResponseWriter, r *http.Request, snap *Snapshot) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing required query parameter: id")
+		return
+	}
+	hops := intParam(r, "hops", 1, MaxHops)
+
+	result, err := context.Explain(snap.Graph, snapshotSummaryReader{snap}, id, hops)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSON(w, ExplainDTO{NodeID: id, Result: result})
+}
+
+// intParam parses the named query parameter as a positive int, clamped to
+// max, falling back to def if it's missing or invalid.
+func intParam(r *http.Request, name string, def, max int) int {
+	raw := r.URL.Query().Get(name)
+	if raw == "" {
+		return def
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		return def
+	}
+	if n > max {
+		return max
+	}
+	return n
 }

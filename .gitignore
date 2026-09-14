@@ -1,0 +1,41 @@
+# Build artifacts
+/bin/
+/kgraph
+/kgraph.exe
+**/kgraph-out/
+
+# Test / coverage output
+/coverage
+*.cover
+*.out
+coverage.html
+
+# kgraph's own cache/db output (see internal/store/paths.go)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Go
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+
+# Local Claude Code state (not part of the shared config)
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
+.claude/routines/.state/
+.claude/worktrees/
+.claude/checkpoints/
+.claude/mailbox/
+.claude/agent-registry.json
+.claude/agent-memory-local
+.claude/first-run
+.claude/assistant-daemon-state.json

@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"kgraph/internal/graph"
-	"kgraph/internal/store"
 	"kgraph/internal/summarizer"
 )
 
@@ -15,7 +14,7 @@ import (
 // function name — falling back to lexical SearchNodes for anything else
 // (a fuzzy/topic query), per context-assembly's "Target resolution"
 // requirement.
-func resolveTarget(g *graph.Graph, s *store.Store, target string) (*graph.Node, error) {
+func resolveTarget(g *graph.Graph, s summarizer.SummaryReader, target string) (*graph.Node, error) {
 	if n := g.Node(target); n != nil {
 		return n, nil
 	}

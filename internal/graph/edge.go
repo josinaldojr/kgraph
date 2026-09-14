@@ -15,6 +15,18 @@ const (
 	EdgeTypeReadsTable      EdgeType = "reads_table"
 	EdgeTypeWritesTable     EdgeType = "writes_table"
 	EdgeTypeExposesEndpoint EdgeType = "exposes_endpoint"
+	EdgeTypeExtends         EdgeType = "extends"
+	EdgeTypeInjected        EdgeType = "injected"
+	EdgeTypeDecorated       EdgeType = "decorated"
+	EdgeTypeRouted          EdgeType = "routed"
+	EdgeTypeExplains        EdgeType = "explains"
+)
+
+// Confidence describes an edge's provenance: whether it was read directly
+// off the AST or inferred via cross-file/heuristic resolution.
+const (
+	ConfidenceExtracted = "EXTRACTED"
+	ConfidenceInferred  = "INFERRED"
 )
 
 // Edge is a directed, typed relationship between two nodes.
@@ -23,5 +35,6 @@ type Edge struct {
 	Type       EdgeType
 	SrcID      string
 	DstID      string
+	Confidence string
 	Properties map[string]any
 }

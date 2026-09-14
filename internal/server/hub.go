@@ -71,9 +71,12 @@ func (h *Hub) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects/{key}/graph/local", h.projectHandler(apiGraphLocal))
 	mux.HandleFunc("GET /api/projects/{key}/node", h.projectHandler(apiNode))
 	mux.HandleFunc("GET /api/projects/{key}/search", h.projectHandler(apiSearch))
+	mux.HandleFunc("GET /api/projects/{key}/query", h.projectHandler(apiQuery))
+	mux.HandleFunc("GET /api/projects/{key}/path", h.projectHandler(apiPath))
+	mux.HandleFunc("GET /api/projects/{key}/explain", h.projectHandler(apiExplain))
 	mux.HandleFunc("GET /api/projects/{key}/events", h.handleProjectEvents)
 	mux.Handle("/static/", staticAssetHandler())
-	return mux
+	return recoverMiddleware(mux)
 }
 
 // handlePickerPage serves the project-selection view at the hub root — no

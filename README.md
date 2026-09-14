@@ -2,10 +2,11 @@
 
 A compact code knowledge graph for AI-assisted code review.
 
-kgraph parses Go repositories, extracts a typed graph of code entities and their relationships, and persists it to SQLite. The graph serves as targeted, token-budgeted context for AI code reviewers — never raw source code.
+kgraph parses source repositories, extracts a typed graph of code entities and their relationships, and persists it to SQLite. The graph serves as targeted, token-budgeted context for AI code reviewers — never raw source code.
 
 ## Features
 
+- **Multi-Language Extraction** — Automatically detects a repository's language(s) (Go, Java, TypeScript, JavaScript, Python) and routes to the matching extractor; multi-language repos have every detected language's subgraph merged into one graph. See [Supported Languages](#supported-languages).
 - **Graph Extraction** — Parses Go code using `go/ast` and `golang.org/x/tools/go/packages` to extract packages, structs, interfaces, functions, fields, ORM-mapped tables/columns, SQL migrations, and call/import/embed edges.
 - **Incremental Updates** — Reprocesses only files changed since the last build via `kgraph update`.
 - **Token-Budgeted Context** — Generates summary-based context for a file, struct, or function, respecting a configurable token budget.
@@ -157,21 +158,38 @@ Options:
 - `--dry-run` — List candidates without deleting
 - `--yes` — Skip confirmation prompt
 
+## Supported Languages
+
+kgraph detects a repository's language(s) from marker files — falling back to counting file extensions if none are found — and runs each detected language's extractor. A repository with more than one language present (e.g. a Java backend plus a TypeScript frontend) has every extractor's output merged into a single graph.
+
+| Language | Marker file(s) | Extractor maturity |
+|---|---|---|
+| Go | `go.mod` | AST-based (`go/ast`, `go/types`, `golang.org/x/tools/go/packages`) — full fidelity: packages, structs, interfaces, functions, fields, calls, embeds, ORM tables/columns, SQL migrations |
+| Java | `pom.xml`, `build.gradle`/`build.gradle.kts` | Regex-based, best-effort — classes, interfaces, enums, methods, fields, imports, inheritance, best-effort calls, Spring annotations (`@Service`/`@RestController`/`@Autowired`/`@GetMapping`/etc.), JPA annotations (`@Entity`/`@Table`/`@Column`), Maven/Gradle dependencies |
+| TypeScript / JavaScript | `tsconfig.json` (TS) / `package.json` without `tsconfig.json` (JS) | Regex-based, best-effort — modules, classes, interfaces, type aliases, enums, functions (incl. arrow functions), imports (ES modules/CommonJS), inheritance, best-effort calls, NestJS decorators (`@Controller`/`@Get`/`@Post`/`@Injectable`/`@Inject`), TypeORM decorators (`@Entity`/`@Column`), package.json dependencies |
+| Python | `pyproject.toml`, `setup.py`, or `requirements.txt` | Regex-based, best-effort — modules, packages, classes (incl. dataclasses, ABC/Protocol), functions and methods, imports, inheritance, best-effort calls, Flask/FastAPI route decorators (`@app.route`/`@app.get`/`@app.post`), SQLAlchemy declarative models (`__tablename__` + `Column(...)`), requirements.txt/pyproject.toml dependencies |
+
+The Java/TypeScript/JavaScript/Python extractors are regex-based rather than AST-based (a tree-sitter-backed rewrite is planned but not yet wired in — see `openspec/changes/multi-language-support/design.md`), so treat their extraction as best-effort: sound and useful for a graph consumed by an AI reviewer, but lower-fidelity than the Go extractor, especially for cross-file call resolution (no type information is available, so calls and framework-injected dependencies are only linked when a same-named node already exists in the graph — unresolved targets are skipped silently rather than reported as errors).
+
 ## Graph Model
 
 ### Node Types
 
 | Type | Description |
 |------|-------------|
-| `Package` | A Go package |
-| `Struct` | A struct type |
-| `Interface` | An interface type |
+| `Package` | A package or module (Go package, Java package, TS/JS/Python module) |
+| `Struct` | A struct or class type |
+| `Interface` | An interface type (or a Python ABC/Protocol) |
 | `Function` | A function or method |
-| `Field` | A struct field |
+| `Field` | A struct field / class property |
 | `Table` | An ORM-mapped database table |
 | `Column` | A table column |
 | `Endpoint` | An HTTP endpoint |
 | `ExternalDependency` | An imported external package |
+| `Enum` | An enum type (Java/TS/Python) |
+| `Decorator` | A decorator/annotation (Java annotations, TS decorators, Python decorators) |
+| `Variable` | A module-level variable (Python) |
+| `TypeAlias` | A type alias (TypeScript) |
 
 ### Edge Types
 
@@ -188,6 +206,10 @@ Options:
 | `reads_table` | Function reads from a table |
 | `writes_table` | Function writes to a table |
 | `exposes_endpoint` | Function exposes an HTTP endpoint |
+| `extends` | Class/interface inheritance (Java/TS/Python) |
+| `injected` | Dependency injection (Spring `@Autowired`, NestJS `@Inject`) |
+| `decorated` | A class is annotated/decorated (Spring stereotypes, NestJS decorators, Python `@dataclass`) |
+| `routed` | A method/function is wired to an HTTP endpoint (Spring, NestJS, Flask, FastAPI) |
 
 ## Architecture
 
@@ -198,7 +220,12 @@ internal/
   context/           Token-budgeted context generation
   gitutil/           Git helpers (commit detection)
   graph/             In-memory graph data structures
-  parser/            Go AST extraction (packages, types, calls, ORM, migrations)
+  parser/            Multi-language extraction, factory-routed by detected language
+    common/          Extractor interface, language detector, factory, graph merge
+    go/              Go AST extraction (packages, types, calls, ORM, migrations)
+    java/            Java extraction (regex-based, best-effort)
+    typescript/      TypeScript/JavaScript extraction (regex-based, best-effort)
+    python/          Python extraction (regex-based, best-effort)
   server/            HTTP server, SSE broadcaster, hub, poller
   store/             SQLite persistence (graph, summaries, build metadata)
   summarizer/        Summarization pipeline (pending export, apply, search)
@@ -206,7 +233,7 @@ internal/
 
 ## Global Flags
 
-- `--repo` — Path to the Go repository (default: `.`)
+- `--repo` — Path to the repository (default: `.`)
 - `--db` — Path to the graph database (default: per-user cache dir keyed by `--repo`)
 
 ## License

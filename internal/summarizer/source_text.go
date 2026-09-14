@@ -9,9 +9,10 @@ import (
 )
 
 // sourceTextFor builds a pending-summary's "source text" for a node type
-// with no Go source span of its own (Table, Endpoint, ExternalDependency),
-// per entity-summarization's "Pending-summary export" requirement: each
-// type gets a type-appropriate rendering instead of raw source.
+// with no Go source span of its own (Table, Endpoint, ExternalDependency,
+// Enum, Decorator, Variable, TypeAlias), per entity-summarization's
+// "Pending-summary export" requirement: each type gets a type-appropriate
+// rendering instead of raw source.
 func sourceTextFor(g *graph.Graph, n *graph.Node) string {
 	switch n.Type {
 	case graph.NodeTypeTable:
@@ -20,6 +21,14 @@ func sourceTextFor(g *graph.Graph, n *graph.Node) string {
 		return endpointSourceText(g, n)
 	case graph.NodeTypeExternalDependency:
 		return externalDependencySourceText(n)
+	case graph.NodeTypeEnum:
+		return enumSourceText(g, n)
+	case graph.NodeTypeDecorator:
+		return decoratorSourceText(g, n)
+	case graph.NodeTypeVariable:
+		return variableSourceText(g, n)
+	case graph.NodeTypeTypeAlias:
+		return typeAliasSourceText(g, n)
 	default:
 		return ""
 	}
@@ -126,4 +135,82 @@ func externalDependencySourceText(dep *graph.Node) string {
 		return fmt.Sprintf("EXTERNAL DEPENDENCY %s @ %s\n", path, version)
 	}
 	return fmt.Sprintf("EXTERNAL DEPENDENCY %s\n", path)
+}
+
+// enumSourceText renders an Enum's values (if available) and its package.
+func enumSourceText(g *graph.Graph, enum *graph.Node) string {
+	name, _ := enum.Properties["name"].(string)
+	if name == "" {
+		name = enum.ID
+	}
+	pkg, _ := enum.Properties["package"].(string)
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "ENUM %s\n", name)
+	if pkg != "" {
+		fmt.Fprintf(&b, "Package: %s\n", pkg)
+	}
+	return b.String()
+}
+
+// decoratorSourceText renders a Decorator's name and what it decorates.
+func decoratorSourceText(g *graph.Graph, dec *graph.Node) string {
+	name, _ := dec.Properties["name"].(string)
+	if name == "" {
+		name = dec.ID
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "DECORATOR %s\n", name)
+
+	// Find what this decorator decorates
+	for _, e := range g.InEdges(dec.ID) {
+		if e.Type == graph.EdgeTypeDecorated {
+			entity := g.Node(e.SrcID)
+			if entity != nil {
+				fmt.Fprintf(&b, "Decorates: %s\n", entity.ID)
+			}
+		}
+	}
+	return b.String()
+}
+
+// variableSourceText renders a Variable's name and type.
+func variableSourceText(g *graph.Graph, v *graph.Node) string {
+	name, _ := v.Properties["name"].(string)
+	if name == "" {
+		name = v.ID
+	}
+	pkg, _ := v.Properties["package"].(string)
+	varType, _ := v.Properties["type"].(string)
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "VARIABLE %s\n", name)
+	if pkg != "" {
+		fmt.Fprintf(&b, "Package: %s\n", pkg)
+	}
+	if varType != "" {
+		fmt.Fprintf(&b, "Type: %s\n", varType)
+	}
+	return b.String()
+}
+
+// typeAliasSourceText renders a TypeAlias's name and target type.
+func typeAliasSourceText(g *graph.Graph, ta *graph.Node) string {
+	name, _ := ta.Properties["name"].(string)
+	if name == "" {
+		name = ta.ID
+	}
+	pkg, _ := ta.Properties["package"].(string)
+	targetType, _ := ta.Properties["target_type"].(string)
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "TYPE ALIAS %s\n", name)
+	if pkg != "" {
+		fmt.Fprintf(&b, "Package: %s\n", pkg)
+	}
+	if targetType != "" {
+		fmt.Fprintf(&b, "Target: %s\n", targetType)
+	}
+	return b.String()
 }

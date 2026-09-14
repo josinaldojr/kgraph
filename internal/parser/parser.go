@@ -1,120 +1,143 @@
-// Package parser extracts a code knowledge graph from a Go repository using
-// the standard library (go/ast, go/parser) plus golang.org/x/tools/go/packages
-// for best-effort call-edge resolution. See design.md's "Decisions" #1 for
-// why this repo uses go/packages instead of tree-sitter.
+// Package parser provides the multi-language code extraction entry point.
+// It uses a factory pattern to route to the correct language-specific
+// extractor based on detected language.
 package parser
 
 import (
 	"fmt"
-	"go/ast"
-	"go/token"
-
-	"golang.org/x/tools/go/packages"
 
 	"kgraph/internal/graph"
+	"kgraph/internal/parser/common"
+	goparser "kgraph/internal/parser/go"
+	javaparser "kgraph/internal/parser/java"
+	pythonparser "kgraph/internal/parser/python"
+	typescriptparser "kgraph/internal/parser/typescript"
 )
 
-// extractor holds the state shared across extraction passes for a single
-// ExtractRepo call.
-type extractor struct {
-	g         *graph.Graph
-	fset      *token.FileSet
-	pkgs      []*packages.Package
-	pkgByPath map[string]*packages.Package
-	internal  map[string]bool // PkgPath -> true for packages within the loaded module
-	ormFields []ormFieldCandidate
-	warnings  []string
+// defaultFactory is the package-level factory with all built-in extractors
+// registered.
+var defaultFactory *common.ExtractorFactory
+
+func init() {
+	defaultFactory = common.NewExtractorFactory()
+	defaultFactory.Register(common.LangGo, goparser.NewGoExtractor())
+	defaultFactory.Register(common.LangJava, javaparser.NewJavaExtractor())
+	defaultFactory.Register(common.LangTypeScript, typescriptparser.NewTypeScriptExtractor())
+	defaultFactory.Register(common.LangJavaScript, typescriptparser.NewJavaScriptExtractor())
+	defaultFactory.Register(common.LangPython, pythonparser.NewPythonExtractor())
 }
 
-// ExtractRepo parses every Go package under repoPath, extracts packages,
-// structs, interfaces, functions, fields, ORM-mapped tables/columns, SQL
-// migrations, and call/has_field/has_method/imports edges, and returns the
-// resulting graph. Parsing/type errors in individual files or packages are
-// collected as non-fatal warnings (returned alongside the graph) rather than
-// aborting extraction — call-edge and type resolution are best-effort, per
-// design.md.
+// ExtractRepo detects the language(s) of the repository at repoPath and
+// extracts the full code knowledge graph. For multi-language projects,
+// graphs from each language are merged.
 func ExtractRepo(repoPath string) (*graph.Graph, []string, error) {
-	g, warnings, err := ExtractPackages(repoPath, []string{"./..."}, nil)
+	detector := common.NewLanguageDetector()
+	result, err := detector.Detect(repoPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("parser: detecting language: %w", err)
 	}
-	migWarnings, err := ExtractMigrations(repoPath, g)
-	if err != nil {
-		warnings = append(warnings, fmt.Sprintf("migrations: %v", err))
-	} else {
-		warnings = append(warnings, migWarnings...)
+
+	extractors, factoryWarnings := defaultFactory.ForDetection(result)
+	if len(extractors) == 0 {
+		return nil, factoryWarnings, fmt.Errorf("parser: no extractors available for detected languages %v", result.All)
 	}
-	return g, warnings, nil
+
+	var graphs []*graph.Graph
+	var allWarnings []string
+	allWarnings = append(allWarnings, factoryWarnings...)
+
+	for _, ext := range extractors {
+		g, warnings, err := ext.ExtractRepo(repoPath)
+		if err != nil {
+			allWarnings = append(allWarnings, fmt.Sprintf("%s: %v", ext.Language(), err))
+			continue
+		}
+		allWarnings = append(allWarnings, warnings...)
+		allWarnings = append(allWarnings, g.IDConflicts()...)
+		graphs = append(graphs, g)
+	}
+
+	if len(graphs) == 0 {
+		return nil, allWarnings, fmt.Errorf("parser: all extractors failed")
+	}
+
+	merged, mergeWarnings := common.MergeGraphsWithWarnings(graphs...)
+	allWarnings = append(allWarnings, mergeWarnings...)
+
+	return merged, allWarnings, nil
 }
 
-// ExtractPackages is ExtractRepo scoped to a specific set of go/packages
-// patterns (e.g. "./internal/foo" for just that directory's package,
-// non-recursively) instead of the whole module — used by incremental
-// update to reprocess only the packages containing changed files. Unlike
-// ExtractRepo, it does NOT also run SQL migration extraction (that's a
-// repo-wide file walk, orthogonal to which Go packages changed) — callers
-// that need migrations re-scanned call ExtractMigrations themselves.
-//
-// knownInternal seeds the internal/external import classification with
-// import paths already known (from a prior full build) to belong to the
-// module, so a scoped load — which by itself only "sees" the packages it
-// was asked to load — doesn't mistake an unloaded-but-still-internal
-// sibling package for an ExternalDependency. ExtractRepo passes nil since
-// a "./..." load already sees the whole module.
-func ExtractPackages(repoPath string, patterns []string, knownInternal map[string]bool) (*graph.Graph, []string, error) {
-	cfg := &packages.Config{
-		Dir: repoPath,
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-			packages.NeedImports | packages.NeedDeps | packages.NeedSyntax |
-			packages.NeedTypes | packages.NeedTypesInfo,
-	}
-	pkgs, err := packages.Load(cfg, patterns...)
+// ExtractPackages extracts a scoped subset of the repository, used by
+// incremental updates. patternsByLang is the set of changed directories per
+// language (a caller with a mixed-language changeset must not hand every
+// extractor every language's directories); oldGraph is the previously
+// persisted graph (possibly multi-language), from which each extractor's
+// knownInternal is scoped to just its own language via
+// common.KnownInternalForLanguage.
+func ExtractPackages(repoPath string, patternsByLang map[common.Language][]string, oldGraph *graph.Graph) (*graph.Graph, []string, error) {
+	detector := common.NewLanguageDetector()
+	result, err := detector.Detect(repoPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parser: loading packages %v under %s: %w", patterns, repoPath, err)
-	}
-	if len(pkgs) == 0 {
-		return nil, nil, fmt.Errorf("parser: no Go packages found for %v under %s", patterns, repoPath)
+		return nil, nil, fmt.Errorf("parser: detecting language: %w", err)
 	}
 
-	internal := make(map[string]bool, len(pkgs)+len(knownInternal))
-	for path, v := range knownInternal {
-		if v {
-			internal[path] = true
+	extractors, factoryWarnings := defaultFactory.ForDetection(result)
+	if len(extractors) == 0 {
+		return nil, factoryWarnings, fmt.Errorf("parser: no extractors available for detected languages %v", result.All)
+	}
+
+	var graphs []*graph.Graph
+	var allWarnings []string
+	allWarnings = append(allWarnings, factoryWarnings...)
+
+	for _, ext := range extractors {
+		langPatterns := patternsByLang[ext.Language()]
+		if len(langPatterns) == 0 {
+			// Detected in the repo, but nothing of this language changed
+			// this round — skip it rather than call ExtractPackages with
+			// an empty pattern list, which some extractors (Go, via
+			// packages.Load with zero patterns) treat as an error.
+			continue
 		}
-	}
-
-	ex := &extractor{
-		g:         graph.New(),
-		pkgs:      pkgs,
-		pkgByPath: make(map[string]*packages.Package, len(pkgs)),
-		internal:  internal,
-	}
-	for _, p := range pkgs {
-		if len(p.Syntax) > 0 {
-			ex.fset = p.Fset
+		known := common.KnownInternalForLanguage(oldGraph, ext.Language())
+		g, warnings, err := ext.ExtractPackages(repoPath, langPatterns, known)
+		if err != nil {
+			allWarnings = append(allWarnings, fmt.Sprintf("%s: %v", ext.Language(), err))
+			continue
 		}
-		ex.pkgByPath[p.PkgPath] = p
-		ex.internal[p.PkgPath] = true
-		for _, e := range p.Errors {
-			ex.warnings = append(ex.warnings, fmt.Sprintf("%s: %s", p.PkgPath, e.Msg))
-		}
+		allWarnings = append(allWarnings, warnings...)
+		allWarnings = append(allWarnings, g.IDConflicts()...)
+		graphs = append(graphs, g)
 	}
 
-	ex.extractPackagesAndImports()
-	ex.extractTypes() // structs, interfaces, fields -> pass 2
-	ex.mapORMFields() // struct tags -> Table/Column nodes -> pass 2b
-	ex.extractFuncs() // functions/methods + has_method -> pass 3a
-	ex.extractCalls() // calls edges -> pass 3b
+	if len(graphs) == 0 {
+		return nil, allWarnings, fmt.Errorf("parser: all extractors failed")
+	}
 
-	return ex.g, ex.warnings, nil
+	merged, mergeWarnings := common.MergeGraphsWithWarnings(graphs...)
+	allWarnings = append(allWarnings, mergeWarnings...)
+
+	return merged, allWarnings, nil
 }
 
-// forEachFile invokes fn for every parsed syntax file across the module's
-// loaded packages.
-func (ex *extractor) forEachFile(fn func(pkg *packages.Package, file *ast.File)) {
-	for _, pkg := range ex.pkgs {
-		for _, file := range pkg.Syntax {
-			fn(pkg, file)
-		}
-	}
+// RegisterExtractor registers a custom extractor for a language.
+// This allows extending kgraph with additional language support.
+func RegisterExtractor(lang common.Language, ext common.Extractor) {
+	defaultFactory.Register(lang, ext)
+}
+
+// Detector returns the language detector for external use.
+func Detector() *common.LanguageDetector {
+	return common.NewLanguageDetector()
+}
+
+// Factory returns the default extractor factory for external use.
+func Factory() *common.ExtractorFactory {
+	return defaultFactory
+}
+
+// ExtractMigrations parses SQL migration files and adds them to the graph.
+// This is re-exported from the Go parser for backward compatibility.
+func ExtractMigrations(repoPath string, g *graph.Graph) ([]string, error) {
+	return goparser.ExtractMigrations(repoPath, g)
 }

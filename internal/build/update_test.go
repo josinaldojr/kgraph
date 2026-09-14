@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"kgraph/internal/graph"
+	"kgraph/internal/store"
 )
 
 // setupMultiPackageGitRepo creates a throwaway git repo with numPkgs small
@@ -120,6 +123,112 @@ func TestUpdateFasterThanFullRebuild(t *testing.T) {
 		t.Errorf("expected incremental update (%v) to be faster than a full rebuild (%v) across %d packages",
 			updateElapsed, buildElapsed, numPkgs)
 	}
+}
+
+// setupMultiLanguageGitRepo creates a throwaway git repo with a Go package
+// and a Python module side by side (go.mod + requirements.txt both present
+// so the language detector reports both languages — see detector.go), for
+// task 8.6's incremental-update-across-languages coverage.
+func setupMultiLanguageGitRepo(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+
+	write := func(rel, content string) {
+		abs := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+			t.Fatalf("mkdir for %s: %v", rel, err)
+		}
+		if err := os.WriteFile(abs, []byte(content), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", rel, err)
+		}
+	}
+
+	write("go.mod", "module multilangfixture\n\ngo 1.22\n")
+	write("goapp/main.go", "package goapp\n\nfunc Foo() int {\n\treturn 1\n}\n")
+	write("requirements.txt", "flask>=2.0.0\n")
+	write("pyapp/service.py", "def bar():\n    return 2\n")
+
+	run := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=kgraph-test", "GIT_AUTHOR_EMAIL=kgraph-test@example.com",
+			"GIT_COMMITTER_NAME=kgraph-test", "GIT_COMMITTER_EMAIL=kgraph-test@example.com")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run("init", "-q")
+	run("add", ".")
+	run("commit", "-q", "-m", "initial")
+	return dir
+}
+
+// TestUpdateMultiLanguageOnlyReprocessesChangedLanguage builds a repo that
+// mixes Go and Python (detector.go detects both from go.mod +
+// requirements.txt), changes only the Python side, and verifies that
+// Update reprocesses just the Python file while leaving the Go subgraph
+// (extracted in the initial Run) intact — i.e. a mixed-language changeset
+// doesn't hand every extractor every other language's directories, and
+// SaveGraph's upsert semantics don't drop untouched languages.
+func TestUpdateMultiLanguageOnlyReprocessesChangedLanguage(t *testing.T) {
+	repo := setupMultiLanguageGitRepo(t)
+	dbPath := filepath.Join(t.TempDir(), "graph.db")
+
+	if _, err := Run(repo, dbPath); err != nil {
+		t.Fatalf("initial Run() error = %v", err)
+	}
+
+	pyFile := filepath.Join(repo, "pyapp", "service.py")
+	if err := os.WriteFile(pyFile, []byte("def bar():\n    return 2\n\n\ndef baz():\n    return bar()\n"), 0o644); err != nil {
+		t.Fatalf("rewriting service.py: %v", err)
+	}
+	gitCommit(t, repo, "add baz to pyapp")
+
+	res, err := Update(repo, dbPath)
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if res.NoChange {
+		t.Fatal("expected Update to detect the pyapp change, got NoChange=true")
+	}
+	if len(res.ChangedFiles) != 1 || filepath.ToSlash(res.ChangedFiles[0]) != "pyapp/service.py" {
+		t.Fatalf("expected exactly pyapp/service.py changed, got %+v", res.ChangedFiles)
+	}
+
+	s, err := store.Open(dbPath)
+	if err != nil {
+		t.Fatalf("re-opening store: %v", err)
+	}
+	defer s.Close()
+	full, err := s.LoadGraph()
+	if err != nil {
+		t.Fatalf("LoadGraph() error = %v", err)
+	}
+
+	// The untouched Go function must have survived the Python-only update.
+	if full.Node(graph.FunctionID("multilangfixture/goapp", "", "Foo")) == nil {
+		t.Error("expected Go function Foo to still be present after a Python-only update")
+	}
+	// The new Python function must be present.
+	if full.Node(graph.FunctionID("pyapp.service", "", "baz")) == nil {
+		t.Error("expected new Python function baz to be present after update")
+	}
+	// And the call baz() -> bar() should have been extracted.
+	if !hasEdgeUpdateTest(full, graph.EdgeTypeCalls,
+		graph.FunctionID("pyapp.service", "", "baz"),
+		graph.FunctionID("pyapp.service", "", "bar")) {
+		t.Error("expected baz --calls--> bar")
+	}
+}
+
+func hasEdgeUpdateTest(g *graph.Graph, edgeType graph.EdgeType, srcID, dstID string) bool {
+	for _, e := range g.OutEdges(srcID) {
+		if e.Type == edgeType && e.DstID == dstID {
+			return true
+		}
+	}
+	return false
 }
 
 func gitCommit(t *testing.T, repo, msg string) {

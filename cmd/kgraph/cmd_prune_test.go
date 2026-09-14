@@ -233,7 +233,7 @@ func TestPruneSkipsLockedCandidateAndContinues(t *testing.T) {
 func TestPruneNothingToPrune(t *testing.T) {
 	var out bytes.Buffer
 	runner := &pruneRunner{
-		out:     &out,
+		out: &out,
 		discover: func() ([]store.ProjectInfo, error) {
 			return []store.ProjectInfo{{Key: "aaaaaaaaaaaaaaaa", Status: store.StatusBuilt, RepoPath: t.TempDir(), LastCommit: "c1"}}, nil
 		},

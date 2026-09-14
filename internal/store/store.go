@@ -41,6 +41,10 @@ func Open(dbPath string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("store: applying schema: %w", err)
 	}
+	if err := migrate(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("store: applying migrations: %w", err)
+	}
 	return &Store{db: db}, nil
 }
 

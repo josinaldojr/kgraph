@@ -12,9 +12,10 @@ type NodeSummaryDTO struct {
 
 // EdgeDTO is one edge as rendered in a graph view.
 type EdgeDTO struct {
-	Type string `json:"type"`
-	Src  string `json:"src"`
-	Dst  string `json:"dst"`
+	Type       string `json:"type"`
+	Src        string `json:"src"`
+	Dst        string `json:"dst"`
+	Confidence string `json:"confidence,omitempty"`
 }
 
 // GraphDTO is the payload for both /api/graph and /api/graph/local.
@@ -40,15 +41,19 @@ type RelationDTO struct {
 
 // NodeDetailDTO is the full payload for /api/node.
 type NodeDetailDTO struct {
-	ID        string        `json:"id"`
-	Type      string        `json:"type"`
-	Signature string        `json:"signature,omitempty"`
-	File      string        `json:"file,omitempty"`
-	LineStart int           `json:"line_start,omitempty"`
-	LineEnd   int           `json:"line_end,omitempty"`
-	Note      NoteDTO       `json:"note"`
-	FileNote  *NoteDTO      `json:"file_note,omitempty"`
-	Relations []RelationDTO `json:"relations"`
+	ID             string        `json:"id"`
+	Type           string        `json:"type"`
+	Signature      string        `json:"signature,omitempty"`
+	File           string        `json:"file,omitempty"`
+	LineStart      int           `json:"line_start,omitempty"`
+	LineEnd        int           `json:"line_end,omitempty"`
+	Note           NoteDTO       `json:"note"`
+	FileNote       *NoteDTO      `json:"file_note,omitempty"`
+	Relations      []RelationDTO `json:"relations"`
+	Degree         int           `json:"degree"`
+	GodNode        bool          `json:"god_node"`
+	Community      int           `json:"community"`
+	CommunityLabel string        `json:"community_label,omitempty"`
 }
 
 // SearchResultDTO is one ranked result from /api/search.
@@ -57,4 +62,37 @@ type SearchResultDTO struct {
 	Type  string `json:"type"`
 	File  string `json:"file,omitempty"`
 	Score int    `json:"score"`
+}
+
+// QueryDTO is the payload for /api/query: the natural-language question
+// and its rendered, token-budgeted subgraph answer (the same text
+// `kgraph query` prints), per query-engine's query-as-API requirement.
+type QueryDTO struct {
+	Question string `json:"question"`
+	Result   string `json:"result"`
+}
+
+// PathHopDTO is one hop in a PathDTO: the node reached, and — except for
+// the first hop — the edge type and confidence that reached it.
+type PathHopDTO struct {
+	NodeID     string `json:"node_id"`
+	NodeType   string `json:"node_type"`
+	ViaEdge    string `json:"via_edge,omitempty"`
+	Confidence string `json:"confidence,omitempty"`
+}
+
+// PathDTO is the payload for /api/path: the shortest weighted path found
+// between two nodes (see context.Path), or an empty Hops with Found=false
+// if none exists.
+type PathDTO struct {
+	Found bool         `json:"found"`
+	Hops  []PathHopDTO `json:"hops"`
+}
+
+// ExplainDTO is the payload for /api/explain: a node's full-detail
+// rendering (summary, relations with confidence, rationale, analytics
+// metadata — the same text `kgraph explain` prints).
+type ExplainDTO struct {
+	NodeID string `json:"node_id"`
+	Result string `json:"result"`
 }

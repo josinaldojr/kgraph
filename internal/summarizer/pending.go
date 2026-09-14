@@ -45,6 +45,10 @@ var summarizableTypes = map[graph.NodeType]bool{
 	graph.NodeTypeTable:              true,
 	graph.NodeTypeEndpoint:           true,
 	graph.NodeTypeExternalDependency: true,
+	graph.NodeTypeEnum:               true,
+	graph.NodeTypeDecorator:          true,
+	graph.NodeTypeVariable:           true,
+	graph.NodeTypeTypeAlias:          true,
 }
 
 // hasOwnSourceSpan reports whether a node type's source text comes from a
@@ -52,7 +56,8 @@ var summarizableTypes = map[graph.NodeType]bool{
 // from the node's own properties and edges (sourceTextFor).
 func hasOwnSourceSpan(t graph.NodeType) bool {
 	switch t {
-	case graph.NodeTypeStruct, graph.NodeTypeInterface, graph.NodeTypeFunction:
+	case graph.NodeTypeStruct, graph.NodeTypeInterface, graph.NodeTypeFunction,
+		graph.NodeTypeEnum, graph.NodeTypeDecorator, graph.NodeTypeVariable, graph.NodeTypeTypeAlias:
 		return true
 	default:
 		return false

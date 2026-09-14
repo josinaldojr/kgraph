@@ -47,7 +47,7 @@ func loadGraph(db *sql.DB) (*graph.Graph, error) {
 	}
 	rows.Close()
 
-	erows, err := db.Query(`SELECT id, type, src_id, dst_id, properties FROM edges`)
+	erows, err := db.Query(`SELECT id, type, src_id, dst_id, confidence, properties FROM edges`)
 	if err != nil {
 		return nil, fmt.Errorf("store: querying edges: %w", err)
 	}
@@ -55,7 +55,7 @@ func loadGraph(db *sql.DB) (*graph.Graph, error) {
 	for erows.Next() {
 		var e graph.Edge
 		var typ, propsJSON string
-		if err := erows.Scan(&e.ID, &typ, &e.SrcID, &e.DstID, &propsJSON); err != nil {
+		if err := erows.Scan(&e.ID, &typ, &e.SrcID, &e.DstID, &e.Confidence, &propsJSON); err != nil {
 			return nil, fmt.Errorf("store: scanning edge row: %w", err)
 		}
 		e.Type = graph.EdgeType(typ)

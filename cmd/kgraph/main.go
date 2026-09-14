@@ -35,6 +35,14 @@ func main() {
 	root.AddCommand(newServeCmd())
 	root.AddCommand(newProjectsCmd())
 	root.AddCommand(newPruneCmd())
+	root.AddCommand(newAnalyzeCmd())
+	root.AddCommand(newQueryCmd())
+	root.AddCommand(newPathCmd())
+	root.AddCommand(newExplainCmd())
+	root.AddCommand(newPromptCmd())
+	root.AddCommand(newExportCmd())
+	root.AddCommand(newReportCmd())
+	root.AddCommand(newMCPCmd())
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

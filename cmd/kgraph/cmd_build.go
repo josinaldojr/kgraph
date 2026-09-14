@@ -11,6 +11,9 @@ import (
 )
 
 func newBuildCmd() *cobra.Command {
+	var noAnalyze bool
+	var godNodes int
+
 	cmd := &cobra.Command{
 		Use:   "build [repo_path]",
 		Short: "Extract a repository's code knowledge graph and persist it",
@@ -24,7 +27,7 @@ func newBuildCmd() *cobra.Command {
 				return fail(cmd, err)
 			}
 
-			res, err := build.Run(repoPath, dbPath)
+			res, err := build.Run(repoPath, dbPath, build.Options{NoAnalyze: noAnalyze, GodNodeCount: godNodes})
 			if err != nil {
 				return fail(cmd, err)
 			}
@@ -44,6 +47,8 @@ func newBuildCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&noAnalyze, "no-analyze", false, "skip the analyze stage (degree, god nodes, communities)")
+	cmd.Flags().IntVar(&godNodes, "god-nodes", 0, "number of top-degree nodes to mark as god nodes (default 10)")
 	return cmd
 }
 

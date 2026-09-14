@@ -125,12 +125,15 @@
     const NODE_TYPES = [
       "Package", "Struct", "Interface", "Function", "Field",
       "Table", "Column", "Endpoint", "ExternalDependency",
+      "Enum", "Decorator", "Variable", "TypeAlias",
     ];
     const HIDDEN_BY_DEFAULT = new Set(["Field", "Column"]);
     const COLORS = {
       Package: "#4c6ef5", Struct: "#12b886", Interface: "#f59f00",
       Function: "#7048e8", Field: "#adb5bd", Table: "#e64980",
       Column: "#ced4da", Endpoint: "#fa5252", ExternalDependency: "#495057",
+      Enum: "#845ef7", Decorator: "#ff922b", Variable: "#20c997",
+      TypeAlias: "#339af0",
     };
 
     const canvas = document.getElementById("graph");
