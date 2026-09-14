@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 func waitForSnapshot(t *testing.T, gs *GraphService) *Snapshot {

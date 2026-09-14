@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // LoadGraph reconstructs the in-memory Graph from the database: all nodes

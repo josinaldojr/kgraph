@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	mcpserver "kgraph/internal/mcp"
+	mcpserver "github.com/josinaldojr/kgraph/internal/mcp"
 )
 
 func newMCPCmd() *cobra.Command {

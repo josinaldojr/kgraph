@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 func openTestStore(t *testing.T) *Store {

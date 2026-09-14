@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // ErrUnknownProject signals that a request targeted a project key matching

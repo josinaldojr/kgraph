@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // starGraph builds a hub node connected to n leaves, so the hub has the

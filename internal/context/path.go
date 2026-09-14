@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"fmt"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // PathHop is one node along a Path result: the node itself, and — except

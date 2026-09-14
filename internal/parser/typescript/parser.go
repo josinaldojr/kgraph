@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
 )
 
 // TypeScriptExtractor implements common.Extractor for TypeScript/JavaScript source code.

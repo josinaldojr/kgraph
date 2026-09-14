@@ -22,12 +22,12 @@ func assertDeterministicAndDistinct(t *testing.T, cases []idCase) {
 }
 
 func TestPackageIDDeterministic(t *testing.T) {
-	if a, b := PackageID("kgraph/internal/graph"), PackageID("kgraph/internal/graph"); a != b {
+	if a, b := PackageID("github.com/josinaldojr/kgraph/internal/graph"), PackageID("github.com/josinaldojr/kgraph/internal/graph"); a != b {
 		t.Errorf("PackageID() not deterministic: %q != %q", a, b)
 	}
 	assertDeterministicAndDistinct(t, []idCase{
-		{"graph", PackageID("kgraph/internal/graph")},
-		{"store", PackageID("kgraph/internal/store")},
+		{"graph", PackageID("github.com/josinaldojr/kgraph/internal/graph")},
+		{"store", PackageID("github.com/josinaldojr/kgraph/internal/store")},
 	})
 }
 

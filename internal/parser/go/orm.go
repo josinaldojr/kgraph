@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
 )
 
 // structTagHas reports whether the given raw struct tag string contains a

@@ -10,7 +10,7 @@ import (
 	"os"
 	"sort"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // EnrichGraph runs rationale extraction and confidence annotation over

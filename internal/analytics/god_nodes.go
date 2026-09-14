@@ -3,7 +3,7 @@ package analytics
 import (
 	"sort"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // DefaultGodNodeCount is the default N used by `kgraph build`/`kgraph

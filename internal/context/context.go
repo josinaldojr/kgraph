@@ -6,8 +6,8 @@ package context
 import (
 	"fmt"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 const (

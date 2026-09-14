@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
 )
 
 // ormFieldCandidate records a struct field with an ORM tag, deferred for

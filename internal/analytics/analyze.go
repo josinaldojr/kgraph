@@ -1,6 +1,6 @@
 package analytics
 
-import "kgraph/internal/graph"
+import "github.com/josinaldojr/kgraph/internal/graph"
 
 // AnalyzeGraph runs the full analytics stage over g: degree computation,
 // god-node detection (top godNodeCount nodes by degree, or

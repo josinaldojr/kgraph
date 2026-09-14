@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // ReadOnlyStore is a restricted view over the graph database exposing only

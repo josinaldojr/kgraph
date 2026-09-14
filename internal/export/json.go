@@ -9,9 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 // Node is graph.Node's exported (JSON) shape, with its stored summary

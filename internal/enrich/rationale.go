@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // rationaleTagRe matches a single-line comment body tagged with one of the

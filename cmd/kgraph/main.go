@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 var (

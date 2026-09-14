@@ -5,8 +5,8 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
 )
 
 // extractFuncs walks every function/method declaration in every loaded

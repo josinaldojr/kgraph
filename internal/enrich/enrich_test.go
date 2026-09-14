@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // writeFixtureFile writes content to name under a fresh temp dir and

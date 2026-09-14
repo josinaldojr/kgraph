@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // DefaultResolution is the resolution `kgraph build`/`kgraph analyze` use

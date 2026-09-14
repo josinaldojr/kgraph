@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // pollInterval is how often the poller checks build_meta.last_build_at —

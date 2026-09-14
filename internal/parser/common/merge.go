@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // MergeGraphs combines multiple graphs into one unified graph.

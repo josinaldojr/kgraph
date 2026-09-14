@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"kgraph/internal/analytics"
-	"kgraph/internal/enrich"
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/analytics"
+	"github.com/josinaldojr/kgraph/internal/enrich"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // twoCommunityGraph builds two densely-connected clusters plus a single

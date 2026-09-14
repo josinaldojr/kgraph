@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"kgraph/internal/gitutil"
-	"kgraph/internal/graph"
-	"kgraph/internal/parser"
-	"kgraph/internal/parser/common"
-	"kgraph/internal/store"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/gitutil"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
+	"github.com/josinaldojr/kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 // UpdateResult reports what an incremental Update actually reprocessed.

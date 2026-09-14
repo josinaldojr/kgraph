@@ -3,8 +3,8 @@ package summarizer
 import (
 	"fmt"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // AppliedSummary is one provider-written summary being stored back.

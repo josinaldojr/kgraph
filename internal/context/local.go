@@ -1,6 +1,6 @@
 package context
 
-import "kgraph/internal/graph"
+import "github.com/josinaldojr/kgraph/internal/graph"
 
 // LocalGraph returns the node set discovered within hops edges of target —
 // via the same BFS expandSubgraph performs for GetContext — plus every

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/export"
+	"github.com/josinaldojr/kgraph/internal/export"
 )
 
 func newExportCmd() *cobra.Command {

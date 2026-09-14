@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 func summaryFor(summaries map[string]store.SummaryRecord, id string) string {

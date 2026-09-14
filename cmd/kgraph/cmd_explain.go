@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/context"
+	"github.com/josinaldojr/kgraph/internal/context"
 )
 
 func newExplainCmd() *cobra.Command {

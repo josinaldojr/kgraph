@@ -6,7 +6,7 @@
 // is needed.
 package analytics
 
-import "kgraph/internal/graph"
+import "github.com/josinaldojr/kgraph/internal/graph"
 
 // ComputeDegree sets Properties["degree"] on every node in g to its total
 // degree (incoming + outgoing edge count), per graph-analytics' "Every

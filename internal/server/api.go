@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"kgraph/internal/context"
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/context"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 // hiddenByDefault are the node types excluded from /api/graph when no

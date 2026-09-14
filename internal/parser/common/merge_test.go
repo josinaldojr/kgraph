@@ -3,11 +3,11 @@ package common_test
 import (
 	"testing"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
-	javaparser "kgraph/internal/parser/java"
-	pythonparser "kgraph/internal/parser/python"
-	typescriptparser "kgraph/internal/parser/typescript"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
+	javaparser "github.com/josinaldojr/kgraph/internal/parser/java"
+	pythonparser "github.com/josinaldojr/kgraph/internal/parser/python"
+	typescriptparser "github.com/josinaldojr/kgraph/internal/parser/typescript"
 )
 
 // TestMergeGraphsMultiLanguage exercises MergeGraphsWithWarnings against

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/analytics"
+	"github.com/josinaldojr/kgraph/internal/analytics"
 )
 
 func newAnalyzeCmd() *cobra.Command {

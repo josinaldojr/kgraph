@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // PendingSummary is one node/file/module awaiting a summary.

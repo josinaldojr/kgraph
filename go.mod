@@ -1,4 +1,4 @@
-module kgraph
+module github.com/josinaldojr/kgraph
 
 go 1.25.5
 

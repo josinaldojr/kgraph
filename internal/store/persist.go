@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // SaveStats reports what a SaveGraph call actually wrote, distinguishing

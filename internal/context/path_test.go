@@ -3,7 +3,7 @@ package context
 import (
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 func TestPathFindsShortestWeightedRoute(t *testing.T) {

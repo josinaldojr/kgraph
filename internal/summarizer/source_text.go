@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // sourceTextFor builds a pending-summary's "source text" for a node type

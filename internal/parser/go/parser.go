@@ -10,8 +10,8 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
 )
 
 // GoExtractor implements common.Extractor for Go source code.

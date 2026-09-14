@@ -1,6 +1,6 @@
 package enrich
 
-import "kgraph/internal/graph"
+import "github.com/josinaldojr/kgraph/internal/graph"
 
 // inferredEdgeTypes are relationships resolved via cross-file analysis,
 // heuristic matching, or framework-specific regex detection rather than

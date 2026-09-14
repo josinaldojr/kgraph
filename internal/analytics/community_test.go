@@ -3,7 +3,7 @@ package analytics
 import (
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // twoClusterGraph builds two disjoint, densely-connected clusters (a1-a4

@@ -13,10 +13,10 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	kcontext "kgraph/internal/context"
-	"kgraph/internal/export"
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	kcontext "github.com/josinaldojr/kgraph/internal/context"
+	"github.com/josinaldojr/kgraph/internal/export"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // Deps bundles what every tool handler needs: the loaded graph, the store

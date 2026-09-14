@@ -8,12 +8,12 @@ package build
 import (
 	"fmt"
 
-	"kgraph/internal/analytics"
-	"kgraph/internal/enrich"
-	"kgraph/internal/gitutil"
-	"kgraph/internal/graph"
-	"kgraph/internal/parser"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/analytics"
+	"github.com/josinaldojr/kgraph/internal/enrich"
+	"github.com/josinaldojr/kgraph/internal/gitutil"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // Result reports what a Run produced, for CLI output (task 10.1) and for

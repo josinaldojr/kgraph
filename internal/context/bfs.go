@@ -1,6 +1,6 @@
 package context
 
-import "kgraph/internal/graph"
+import "github.com/josinaldojr/kgraph/internal/graph"
 
 // discovered tracks one node found during subgraph expansion: how far
 // (hops) from the target it is, the strongest edge type that reached it

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 func newSearchCmd() *cobra.Command {

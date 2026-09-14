@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // maxReportGodNodes, maxReportSurprises bound how many entries GenerateReport

@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"kgraph/internal/gitutil"
+	"github.com/josinaldojr/kgraph/internal/gitutil"
 )
 
 // Freshness classifies how current a built graph database is relative to its

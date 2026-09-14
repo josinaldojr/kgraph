@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 // relatedNodeHops is how far past the target's direct relations `Prompt`

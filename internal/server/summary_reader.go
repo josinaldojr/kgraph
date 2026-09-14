@@ -3,8 +3,8 @@ package server
 import (
 	"fmt"
 
-	"kgraph/internal/store"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 // snapshotSummaryReader adapts a Snapshot's already-loaded summary maps to

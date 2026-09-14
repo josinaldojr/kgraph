@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 func TestSelectServeMode(t *testing.T) {

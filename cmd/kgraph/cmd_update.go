@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/build"
+	"github.com/josinaldojr/kgraph/internal/build"
 )
 
 func newUpdateCmd() *cobra.Command {

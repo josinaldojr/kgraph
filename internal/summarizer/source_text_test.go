@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // buildTableFixtureGraph builds two ORM/migration-style tables: `users`

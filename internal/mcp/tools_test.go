@@ -11,10 +11,10 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"kgraph/internal/analytics"
-	"kgraph/internal/enrich"
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/analytics"
+	"github.com/josinaldojr/kgraph/internal/enrich"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 func testDeps(t *testing.T) Deps {

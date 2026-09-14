@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 func extractFixture(t *testing.T) *graph.Graph {

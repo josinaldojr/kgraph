@@ -37,20 +37,17 @@ kgraph parses source repositories, extracts a typed graph of code entities and t
 
 ## Installation
 
-Build from source using the Makefile:
+```bash
+go install github.com/josinaldojr/kgraph/cmd/kgraph@latest
+```
+
+Or build from source using the Makefile:
 
 ```bash
 git clone https://github.com/josinaldojr/kgraph.git
 cd kgraph
 make build          # builds ./bin/kgraph
 make install        # builds and installs kgraph to $(go env GOBIN) or $(go env GOPATH)/bin
-```
-
-Or, without the Makefile:
-
-```bash
-go build -o bin/kgraph ./cmd/kgraph   # build only
-go install ./cmd/kgraph               # build and install
 ```
 
 `make install` makes the `kgraph` command available globally, provided that directory is on your `PATH`:

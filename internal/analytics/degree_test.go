@@ -3,7 +3,7 @@ package analytics
 import (
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 func TestComputeDegree(t *testing.T) {

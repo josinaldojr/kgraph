@@ -6,12 +6,12 @@ package parser
 import (
 	"fmt"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
-	goparser "kgraph/internal/parser/go"
-	javaparser "kgraph/internal/parser/java"
-	pythonparser "kgraph/internal/parser/python"
-	typescriptparser "kgraph/internal/parser/typescript"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
+	goparser "github.com/josinaldojr/kgraph/internal/parser/go"
+	javaparser "github.com/josinaldojr/kgraph/internal/parser/java"
+	pythonparser "github.com/josinaldojr/kgraph/internal/parser/python"
+	typescriptparser "github.com/josinaldojr/kgraph/internal/parser/typescript"
 )
 
 // defaultFactory is the package-level factory with all built-in extractors

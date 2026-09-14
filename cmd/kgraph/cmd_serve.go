@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/server"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/server"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 type serveMode uint8

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 func TestQueryFindsRelevantNodeAndExpands(t *testing.T) {

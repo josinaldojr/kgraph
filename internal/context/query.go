@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 // DefaultQuerySeeds is how many top lexical matches seed the query's

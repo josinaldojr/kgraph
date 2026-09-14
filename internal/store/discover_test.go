@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // buildFixtureProject creates <cacheRoot>/<key>/graph.db as a fully built

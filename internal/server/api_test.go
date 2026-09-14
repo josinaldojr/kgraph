@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // buildAPIFixture assembles a small snapshot: a package with two functions

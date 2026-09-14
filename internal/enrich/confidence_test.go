@@ -3,7 +3,7 @@ package enrich
 import (
 	"testing"
 
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 func buildTestGraph(t *testing.T, edgeType graph.EdgeType) *graph.Graph {

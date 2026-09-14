@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/build"
-	"kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/build"
+	"github.com/josinaldojr/kgraph/internal/graph"
 )
 
 // copyDir recursively copies src into dst, both assumed to already exist

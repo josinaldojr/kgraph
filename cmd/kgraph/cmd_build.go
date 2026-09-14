@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"kgraph/internal/build"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/build"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 func newBuildCmd() *cobra.Command {

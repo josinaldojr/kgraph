@@ -4,7 +4,7 @@
 // detected language.
 package common
 
-import "kgraph/internal/graph"
+import "github.com/josinaldojr/kgraph/internal/graph"
 
 // Language identifies a programming language supported by kgraph.
 type Language string

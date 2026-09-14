@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // realRepoTarget is the checkpoint validation target for task 5.2: a real

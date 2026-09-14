@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/parser/common"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/parser/common"
 )
 
 // extractPackagesAndImports creates one Package node per loaded package and

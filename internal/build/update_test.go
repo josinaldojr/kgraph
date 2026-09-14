@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // setupMultiPackageGitRepo creates a throwaway git repo with numPkgs small

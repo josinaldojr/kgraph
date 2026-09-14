@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // gitRepoFixture creates a fresh git repository with one commit and returns

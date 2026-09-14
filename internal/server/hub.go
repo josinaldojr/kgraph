@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/store"
 )
 
 // ProjectDTO is one discovered project as returned by GET /api/projects and

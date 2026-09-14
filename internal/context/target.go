@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"kgraph/internal/graph"
-	"kgraph/internal/summarizer"
+	"github.com/josinaldojr/kgraph/internal/graph"
+	"github.com/josinaldojr/kgraph/internal/summarizer"
 )
 
 // resolveTarget finds the node GetContext's target string refers to: an
