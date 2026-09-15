@@ -49,10 +49,19 @@ func newExportCmd() *cobra.Command {
 				return fail(cmd, fmt.Errorf("writing %s: %w", reportPath, err))
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "exported %d nodes, %d edges to %s\n", g.NodeCount(), g.EdgeCount(), output)
+			html, err := export.ToHTML(g, s, repoPath)
+			if err != nil {
+				return fail(cmd, err)
+			}
+			htmlPath := filepath.Join(output, "graph.html")
+			if err := os.WriteFile(htmlPath, html, 0o644); err != nil {
+				return fail(cmd, fmt.Errorf("writing %s: %w", htmlPath, err))
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "exported %d nodes, %d edges to %s (graph.json, GRAPH_REPORT.md, graph.html)\n", g.NodeCount(), g.EdgeCount(), output)
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&output, "output", "kgraph-out", "output directory for graph.json and GRAPH_REPORT.md")
+	cmd.Flags().StringVar(&output, "output", "kgraph-out", "output directory for graph.json, GRAPH_REPORT.md, and graph.html")
 	return cmd
 }

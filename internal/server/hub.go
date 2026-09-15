@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/josinaldojr/kgraph/internal/store"
+	"github.com/josinaldojr/kgraph/internal/viewer"
 )
 
 // ProjectDTO is one discovered project as returned by GET /api/projects and
@@ -83,7 +84,7 @@ func (h *Hub) Handler() http.Handler {
 // graph canvas, per graph-visualization's "Project selection on hub
 // startup" requirement.
 func (h *Hub) handlePickerPage(w http.ResponseWriter, r *http.Request) {
-	renderIndex(w, bootstrapConfig{Mode: "hub", Page: "picker", APIBase: "/api"})
+	renderIndex(w, viewer.BootstrapConfig{Mode: "hub", Page: "picker", APIBase: "/api"})
 }
 
 // handleViewerRedirect maps /p/<key> to /p/<key>/ so direct links work with
@@ -101,7 +102,7 @@ func (h *Hub) handleViewerPage(w http.ResponseWriter, r *http.Request) {
 		writeProjectError(w, key, err)
 		return
 	}
-	renderIndex(w, bootstrapConfig{
+	renderIndex(w, viewer.BootstrapConfig{
 		Mode:       "hub",
 		Page:       "viewer",
 		ProjectKey: key,

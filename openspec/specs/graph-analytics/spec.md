@@ -30,7 +30,7 @@ The top N nodes by degree (default N=10, configurable) SHALL be marked as god no
 - **THEN** the top 20 nodes by degree SHALL be marked as god nodes
 
 ### Requirement: Communities SHALL be detected via clustering
-The graph SHALL be partitioned into communities using a heuristic clustering algorithm. Each node SHALL be assigned a community ID.
+The graph SHALL be partitioned into communities using modularity-optimization clustering (Louvain: iterative local node moves that maximize modularity, followed by graph aggregation, repeated until no further gain). Each node SHALL be assigned a community ID. The `resolution` parameter SHALL map to Louvain's own resolution parameter: higher resolution favors more, smaller communities; lower resolution favors fewer, larger ones.
 
 #### Scenario: Communities assigned after build
 - **WHEN** `kgraph build` completes
@@ -45,6 +45,10 @@ The graph SHALL be partitioned into communities using a heuristic clustering alg
 #### Scenario: Reclustering without rebuild
 - **WHEN** the user runs `kgraph analyze --recluster --resolution 1.5`
 - **THEN** communities SHALL be recomputed with the given resolution parameter without re-parsing source code
+
+#### Scenario: Deterministic output for a fixed input
+- **WHEN** community detection runs twice on the same graph with the same resolution, without any edit to the graph in between
+- **THEN** both runs SHALL produce the same community assignment for every node — node evaluation order and modularity-gain tie-breaking SHALL NOT depend on map iteration order or any other non-deterministic source
 
 ### Requirement: Analytics SHALL be exposed via API
 The server API SHALL expose god nodes, communities, and analytics metadata.

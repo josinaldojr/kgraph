@@ -187,6 +187,14 @@ func TestExportCommandWritesGraphJSONAndReportToOutputDir(t *testing.T) {
 	if len(reportData) == 0 {
 		t.Error("expected a non-empty GRAPH_REPORT.md alongside graph.json")
 	}
+
+	htmlData, err := os.ReadFile(filepath.Join(outputDir, "graph.html"))
+	if err != nil {
+		t.Fatalf("expected export to also write %s/graph.html: %v", outputDir, err)
+	}
+	if !strings.Contains(string(htmlData), "GreetingFor") {
+		t.Errorf("expected exported graph.html to embed GreetingFor in its dataset, got:\n%s", htmlData)
+	}
 }
 
 // TestExportAndReportDefaultOutputIsKgraphOut checks the --output flags'

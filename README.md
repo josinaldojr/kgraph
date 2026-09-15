@@ -25,10 +25,10 @@ kgraph parses source repositories, extracts a typed graph of code entities and t
 - **Natural-Language Query** — Answers a free-form question with the most relevant, token-budgeted subgraph (`kgraph query`).
 - **Rationale Extraction** — Captures `NOTE`/`WHY`/`HACK`/`TODO`/`FIXME`/`WARNING` comments and docstrings as `Rationale` nodes linked to the code they explain.
 - **Edge Confidence** — Tags every edge as `EXTRACTED` (read directly from source) or `INFERRED` (resolved via cross-file/heuristic analysis), surfaced in `kgraph path` and `kgraph explain`.
-- **Graph Analytics** — Computes node degree, flags high-fan-in/out "god nodes", and detects/labels communities (`kgraph analyze`).
+- **Graph Analytics** — Computes node degree, flags high-fan-in/out "god nodes", and detects/labels communities via Louvain modularity optimization (`kgraph analyze`).
 - **Path Finding & Explain** — Finds the shortest weighted path between two nodes (`kgraph path`) and prints a node's full context — summary, relations, rationale, analytics (`kgraph explain`).
 - **LLM-Ready Prompts** — Renders a node's context as a ready-to-paste markdown prompt (`kgraph prompt`).
-- **Export & Reporting** — Dumps the full graph as JSON and generates a human-readable Markdown report of god nodes, communities, and suggested questions (`kgraph export`, `kgraph report`).
+- **Export & Reporting** — Dumps the full graph as JSON, a self-contained interactive `graph.html` viewer, and a human-readable Markdown report of god nodes, communities, and suggested questions (`kgraph export`, `kgraph report`).
 - **MCP Server** — Exposes the graph to AI assistants over the Model Context Protocol, via stdio or HTTP (`kgraph mcp`).
 - **Summarization Pipeline** — Exports pending nodes as JSON for external providers to summarize, then applies the results.
 - **Live Visualization** — Serves a browsable HTTP viewer with real-time graph updates.
@@ -176,14 +176,14 @@ Options:
 
 ### Export
 
-Export the full graph — nodes, edges, summaries, analytics — as `graph.json`, alongside a generated `GRAPH_REPORT.md`:
+Export the full graph — nodes, edges, summaries, analytics — as `graph.json`, a self-contained `graph.html` viewer (the same force-directed graph `kgraph serve` renders, but openable directly from disk — no server, no database), and a generated `GRAPH_REPORT.md`:
 
 ```bash
 kgraph export
 ```
 
 Options:
-- `--output` — Output directory for `graph.json` and `GRAPH_REPORT.md` (default: `kgraph-out`)
+- `--output` — Output directory for `graph.json`, `graph.html`, and `GRAPH_REPORT.md` (default: `kgraph-out`)
 
 ### Report
 

@@ -68,14 +68,14 @@ func TestLabelCommunitiesSetsLabelForEveryNode(t *testing.T) {
 
 // bridgedClustersGraph builds two densely-connected 4-node clusters joined
 // by one weak bridge edge (a1-b1), with b1 given two extra same-cluster
-// edges so label propagation's plurality vote keeps it anchored to its own
-// cluster rather than crossing the bridge on tie-break alone. The result
-// (verified empirically, not derived): label propagation alone converges
-// the two clusters into one community at DefaultResolution and below, but
-// keeps them apart at a higher resolution, once the resolution-derived
-// mergeSmallCommunities threshold no longer folds a still-small cluster
-// into its bridge-connected neighbor. That crossover is exactly the
-// resolution knob's job, which makes this fixture sensitive to it.
+// edges. The result (verified empirically, not derived): Louvain keeps the
+// two clusters apart at and above DefaultResolution — the bridge is too
+// weak relative to each clique's internal density for modularity to prefer
+// merging them — but at a low enough resolution (below DefaultResolution)
+// the per-community penalty term shrinks enough that merging the two
+// clusters into one community becomes the modularity-maximizing move. That
+// crossover is exactly the resolution knob's job, which makes this fixture
+// sensitive to it.
 func bridgedClustersGraph(t *testing.T) *graph.Graph {
 	t.Helper()
 	g := graph.New()
@@ -104,22 +104,46 @@ func bridgedClustersGraph(t *testing.T) *graph.Graph {
 // graphify-evolution-followups-2: AnalyzeGraph used to hardcode
 // DefaultResolution internally, so `kgraph analyze --resolution X` (without
 // --recluster) silently had no effect. This asserts the parameter actually
-// reaches DetectCommunities and changes its output.
+// reaches DetectCommunities and changes its output: a low-enough resolution
+// merges bridgedClustersGraph's two cliques into one community, while
+// DefaultResolution keeps them apart.
 func TestAnalyzeGraphHonorsResolutionParameter(t *testing.T) {
-	gHigh := bridgedClustersGraph(t)
-	if err := AnalyzeGraph(gHigh, 2, 2.0); err != nil {
-		t.Fatalf("AnalyzeGraph(resolution=2.0) error = %v", err)
-	}
-	highCount := len(gHigh.Communities())
-
 	gLow := bridgedClustersGraph(t)
-	if err := AnalyzeGraph(gLow, 2, DefaultResolution); err != nil {
-		t.Fatalf("AnalyzeGraph(resolution=default) error = %v", err)
+	if err := AnalyzeGraph(gLow, 2, 0.1); err != nil {
+		t.Fatalf("AnalyzeGraph(resolution=0.1) error = %v", err)
 	}
 	lowCount := len(gLow.Communities())
 
-	if highCount <= lowCount {
-		t.Fatalf("expected a higher resolution to yield more communities than the default, got high=%d default=%d", highCount, lowCount)
+	gDefault := bridgedClustersGraph(t)
+	if err := AnalyzeGraph(gDefault, 2, DefaultResolution); err != nil {
+		t.Fatalf("AnalyzeGraph(resolution=default) error = %v", err)
+	}
+	defaultCount := len(gDefault.Communities())
+
+	if lowCount >= defaultCount {
+		t.Fatalf("expected a lower resolution to yield fewer communities than the default, got low=%d default=%d", lowCount, defaultCount)
+	}
+}
+
+// TestDetectCommunitiesDeterministic guards graph-analytics' "Deterministic
+// output for a fixed input" scenario: running detection twice on the same
+// graph and resolution, without any edit in between, must produce identical
+// per-node community assignments — node evaluation order and modularity-gain
+// tie-breaking must not depend on map iteration order or any other
+// non-deterministic source.
+func TestDetectCommunitiesDeterministic(t *testing.T) {
+	for _, resolution := range []float64{0.1, DefaultResolution, 2.0, 3.0} {
+		g1 := bridgedClustersGraph(t)
+		DetectCommunities(g1, resolution)
+		g2 := bridgedClustersGraph(t)
+		DetectCommunities(g2, resolution)
+
+		for _, id := range []string{"a1", "a2", "a3", "a4", "b1", "b2", "b3", "b4"} {
+			c1, c2 := g1.Node(id).Community(), g2.Node(id).Community()
+			if c1 != c2 {
+				t.Errorf("resolution=%v: node %s got community %d on run 1 but %d on run 2", resolution, id, c1, c2)
+			}
+		}
 	}
 }
 

@@ -8,7 +8,7 @@
   "use strict";
 
   const config = Object.assign(
-    { mode: "single", page: "viewer", apiBase: "/api", eventsPath: "/events", homeURL: "" },
+    { mode: "single", page: "viewer", apiBase: "/api", eventsPath: "/events", homeURL: "", static: false, data: null },
     window.KGRAPH || {}
   );
 
@@ -26,6 +26,162 @@
     const d = document.createElement("div");
     d.textContent = s || "";
     return d.innerHTML;
+  }
+
+  // ---- Data access seam: "remote" (fetch against apiBase) vs "static"
+  // (read window.KGRAPH.data in-browser) — design.md Decision 3. Static
+  // mode re-expresses the same shape of BFS internal/context/bfs.go's
+  // LocalGraph does server-side, and approximates (not guaranteed
+  // identical to) internal/summarizer's SearchNodes ranking.
+
+  let staticIndex = null;
+  function getStaticIndex() {
+    if (staticIndex) return staticIndex;
+    const data = config.data || { nodes: [], edges: [] };
+    const byId = new Map();
+    for (const n of data.nodes) byId.set(n.id, n);
+    const adjacency = new Map();
+    for (const n of data.nodes) adjacency.set(n.id, []);
+    for (const e of data.edges) {
+      if (adjacency.has(e.src_id)) adjacency.get(e.src_id).push(e);
+      if (e.dst_id !== e.src_id && adjacency.has(e.dst_id)) adjacency.get(e.dst_id).push(e);
+    }
+    staticIndex = { data, byId, adjacency };
+    return staticIndex;
+  }
+
+  function staticDegree(n) {
+    return (n.properties && n.properties.degree) || 0;
+  }
+
+  function toSummaryDTO(n) {
+    return { id: n.id, type: n.type, signature: n.signature, file: n.file, degree: staticDegree(n) };
+  }
+
+  function sortGraphDTO(dto) {
+    dto.nodes.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    dto.edges.sort((a, b) => {
+      if (a.src !== b.src) return a.src < b.src ? -1 : 1;
+      return a.dst < b.dst ? -1 : a.dst > b.dst ? 1 : 0;
+    });
+    return dto;
+  }
+
+  // loadGlobalData returns the same shape /api/graph does: every node whose
+  // type is in `types`, plus every edge whose endpoints are both included.
+  async function loadGlobalData(types) {
+    if (!config.static) {
+      return fetchJSON(apiURL("/graph?types=" + encodeURIComponent(types.join(","))));
+    }
+    const { data } = getStaticIndex();
+    const allow = new Set(types);
+    const included = new Set();
+    const nodes = [];
+    for (const n of data.nodes) {
+      if (!allow.has(n.type)) continue;
+      included.add(n.id);
+      nodes.push(toSummaryDTO(n));
+    }
+    const edges = [];
+    for (const e of data.edges) {
+      if (included.has(e.src_id) && included.has(e.dst_id)) {
+        edges.push({ type: e.type, src: e.src_id, dst: e.dst_id, confidence: e.confidence });
+      }
+    }
+    return sortGraphDTO({ nodes, edges });
+  }
+
+  // loadLocalData returns the same shape /api/graph/local does: an
+  // undirected BFS out to `hops` edges from id, plus the full induced
+  // subgraph of edges among the discovered nodes.
+  async function loadLocalData(id, hops) {
+    if (!config.static) {
+      return fetchJSON(apiURL("/graph/local?id=" + encodeURIComponent(id) + "&hops=" + (hops || 2)));
+    }
+    const { data, byId, adjacency } = getStaticIndex();
+    if (!byId.has(id)) throw new Error("no such node: " + id);
+    const found = new Set([id]);
+    let frontier = [id];
+    for (let level = 1; level <= (hops || 2) && frontier.length; level++) {
+      const next = [];
+      for (const cur of frontier) {
+        for (const e of adjacency.get(cur) || []) {
+          const other = e.src_id === cur ? e.dst_id : e.src_id;
+          if (found.has(other) || !byId.has(other)) continue;
+          found.add(other);
+          next.push(other);
+        }
+      }
+      frontier = next;
+    }
+    const nodes = [];
+    for (const nid of found) nodes.push(toSummaryDTO(byId.get(nid)));
+    const edges = [];
+    for (const e of data.edges) {
+      if (found.has(e.src_id) && found.has(e.dst_id)) {
+        edges.push({ type: e.type, src: e.src_id, dst: e.dst_id, confidence: e.confidence });
+      }
+    }
+    return sortGraphDTO({ nodes, edges });
+  }
+
+  // getNodeDetail returns the same shape /api/node does, sans file_note
+  // (there's no separate file-level summary in the embedded dataset).
+  async function getNodeDetail(id) {
+    if (!config.static) {
+      return fetchJSON(apiURL("/node?id=" + encodeURIComponent(id)));
+    }
+    const { byId, adjacency } = getStaticIndex();
+    const n = byId.get(id);
+    if (!n) throw new Error("no such node: " + id);
+    const props = n.properties || {};
+    const relations = (adjacency.get(id) || []).map((e) => {
+      const outgoing = e.src_id === id;
+      const otherId = outgoing ? e.dst_id : e.src_id;
+      const other = byId.get(otherId);
+      return { edge_type: e.type, direction: outgoing ? "out" : "in", node_id: otherId, node_type: other ? other.type : "" };
+    });
+    relations.sort((a, b) => {
+      if (a.edge_type !== b.edge_type) return a.edge_type < b.edge_type ? -1 : 1;
+      return a.node_id < b.node_id ? -1 : a.node_id > b.node_id ? 1 : 0;
+    });
+    return {
+      id: n.id, type: n.type, signature: n.signature, file: n.file,
+      line_start: n.line_start, line_end: n.line_end,
+      note: n.summary ? { state: "current", summary: n.summary } : { state: "none" },
+      relations,
+      degree: staticDegree(n),
+      god_node: !!props.god_node,
+      community: typeof props.community === "number" ? props.community : -1,
+      community_label: props.community_label || "",
+    };
+  }
+
+  function searchTokenize(s) {
+    return (s || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  }
+
+  // searchNodes returns the same shape /api/search does. Static mode's
+  // term-overlap scoring approximates, but is not guaranteed identical to,
+  // the server's ranking (design.md Non-Goals).
+  async function searchNodes(q, topK) {
+    if (!config.static) {
+      return fetchJSON(apiURL("/search?q=" + encodeURIComponent(q) + "&topK=" + (topK || 10)));
+    }
+    const { data } = getStaticIndex();
+    const queryTerms = searchTokenize(q);
+    if (queryTerms.length === 0) return [];
+    const scored = [];
+    for (const n of data.nodes) {
+      const text = [n.summary, n.signature, n.properties && n.properties.name, n.id].filter(Boolean).join(" ");
+      const counts = {};
+      for (const t of searchTokenize(text)) counts[t] = (counts[t] || 0) + 1;
+      let score = 0;
+      for (const t of queryTerms) score += counts[t] || 0;
+      if (score > 0) scored.push({ id: n.id, type: n.type, file: n.file, score });
+    }
+    scored.sort((a, b) => (a.score !== b.score ? b.score - a.score : (a.id < b.id ? -1 : 1)));
+    return scored.slice(0, topK || 10);
   }
 
   if (config.page === "picker") {
@@ -172,10 +328,6 @@
     state.transform.x = window.innerWidth / 2;
     state.transform.y = window.innerHeight / 2;
 
-    function typesParam() {
-      return Array.from(state.types).join(",");
-    }
-
     function radiusFor(degree) {
       return Math.min(22, 5 + Math.sqrt(degree || 0) * 3);
     }
@@ -202,7 +354,7 @@
 
     async function loadGlobal() {
       statusEl.textContent = "loading…";
-      const dto = await fetchJSON(apiURL("/graph?types=" + encodeURIComponent(typesParam())));
+      const dto = await loadGlobalData(Array.from(state.types));
       mergeGraph(dto);
       state.mode = "global";
       state.centerId = null;
@@ -212,9 +364,7 @@
 
     async function loadLocal(id, hops) {
       statusEl.textContent = "loading…";
-      const dto = await fetchJSON(
-        apiURL("/graph/local?id=" + encodeURIComponent(id) + "&hops=" + (hops || 2))
-      );
+      const dto = await loadLocalData(id, hops || 2);
       mergeGraph(dto);
       state.mode = "local";
       state.centerId = id;
@@ -243,7 +393,7 @@
     async function openDetail(id) {
       let detail;
       try {
-        detail = await fetchJSON(apiURL("/node?id=" + encodeURIComponent(id)));
+        detail = await getNodeDetail(id);
       } catch (e) {
         statusEl.textContent = "error: " + e.message;
         return;
@@ -322,7 +472,7 @@
       searchTimer = setTimeout(async () => {
         let results;
         try {
-          results = await fetchJSON(apiURL("/search?q=" + encodeURIComponent(q) + "&topK=10"));
+          results = await searchNodes(q, 10);
         } catch {
           return;
         }
@@ -542,7 +692,7 @@
     // ---- Live refresh (SSE) ----
 
     function connectEvents() {
-      if (!config.eventsPath) return;
+      if (config.static || !config.eventsPath) return;
       const es = new EventSource(config.eventsPath);
       es.addEventListener("graph-updated", () => {
         refreshCurrentView();

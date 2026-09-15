@@ -1,0 +1,34 @@
+## ADDED Requirements
+
+### Requirement: Self-contained HTML graph artifact
+The system SHALL be able to produce a single, self-contained `graph.html` file that renders the knowledge graph as an interactive force-directed viewer, with no server process, network connection, or database file required to view it.
+
+#### Scenario: Opening the file directly
+- **WHEN** a person opens a generated `graph.html` directly from disk in a browser (e.g. via a `file://` URL, or an email/chat attachment)
+- **THEN** the graph renders and is explorable without any `kgraph` process running and without any network request leaving the page
+
+#### Scenario: All data is embedded
+- **WHEN** `graph.html` is generated
+- **THEN** it SHALL embed the full graph dataset (nodes with properties/summary/rationale, edges with confidence, communities, god nodes) needed to render and explore it, rather than referencing an external data file
+
+### Requirement: Static viewer matches the live viewer's visual language
+The rendered graph in `graph.html` SHALL use the same visual language as the live `kgraph serve` viewer: node circle radius scaling with degree, node color encoding node type, force-directed layout with draggable nodes, hover-driven neighbor highlighting, type-based filtering (with `Field`/`Column` hidden by default), zoom and pan, a node detail panel, search-to-focus, and a local-graph mode centered on a selected node with a way back to the global view.
+
+#### Scenario: Type filtering works without a server
+- **WHEN** a person toggles a node type off in `graph.html`'s filter controls
+- **THEN** nodes of that type (and edges solely connecting to them) disappear from the view, computed entirely client-side from the embedded dataset
+
+#### Scenario: Local graph mode works without a server
+- **WHEN** a person selects a node in `graph.html` or picks a search result
+- **THEN** the view switches to a local graph centered on that node, computed client-side from the embedded edge list out to the default hop distance, with a visible way to return to the global view
+
+#### Scenario: Search works without a server
+- **WHEN** a person types a query into `graph.html`'s search box
+- **THEN** matching nodes are ranked and offered as results computed entirely client-side from the embedded dataset; exact parity with the live viewer's server-side ranking is not guaranteed
+
+### Requirement: Static viewer omits server-dependent behavior
+`graph.html` SHALL NOT attempt to connect to a live data source: no live-refresh subscription, and no behavior that assumes a reachable `kgraph serve` instance or database.
+
+#### Scenario: No live-refresh attempt
+- **WHEN** `graph.html` is open in a browser
+- **THEN** it does not attempt to open an event stream or poll a server for updates, and the underlying graph never changes without regenerating the file
